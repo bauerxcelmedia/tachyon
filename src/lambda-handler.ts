@@ -1,11 +1,10 @@
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { Buffer } from 'buffer';
 import { Args, resizeBuffer, getS3File, Config } from './lib.js';
 import { URLSearchParams } from 'url';
-import AWS from 'aws-sdk';
-
-const s3 = new AWS.S3();
 
 const streamify_handler: StreamifyHandler = async (event, response) => {
+    const s3Client = new S3Client({ region: process.env.S3_REGION });
     const region = process.env.S3_REGION!;
     const bucket = process.env.S3_BUCKET!;
     const config: Config = {
@@ -49,7 +48,8 @@ const streamify_handler: StreamifyHandler = async (event, response) => {
                     Key: key,
                     Body: buffer,
                 };
-                await s3.putObject(params).promise();
+                const command = new PutObjectCommand(params);
+                await s3Client.send(command);
             } catch (e: any) {
                 if (e.message.includes('404') || fetchResponse?.status === 404) {
                     const metadata = {
