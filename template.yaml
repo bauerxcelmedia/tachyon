@@ -10,6 +10,7 @@ Resources:
         Variables:
           S3_BUCKET: hmn-uploads
           S3_REGION: us-east-1
+          DOMAIN: prod.exmaple.com
       Runtime: nodejs18.x
       Architectures:
       - x86_64
