@@ -1,26 +1,34 @@
-<table width="100%">
-	<tr>
-		<td align="left" colspan="2">
-			<strong>Tachyon</strong><br />
-			Faster than light image resizing service that runs on AWS. Super simple to set up, highly available and very performant.
-		</td>
-	</tr>
-	<tr>
-		<td>
-			A <strong><a href="https://hmn.md/">Human Made</a></strong> project. Maintained by @joehoyle.
-		</td>
-		<td align="center">
-			<img src="https://hmn.md/content/themes/hmnmd/assets/images/hm-logo.svg" width="100" />
-		</td>
-	</tr>
-</table>
+# Tachyon
 
 Tachyon is a faster than light image resizing service that runs on AWS. Super simple to set up, highly available and very performant.
 
-
 ## Setup
 
-Tachyon comes in two parts: the server to serve images and the [plugin to use it](./docs/plugin.md). To use Tachyon, you need to run at least one server, as well as the plugin on all sites you want to use it.
+Tachyon comes in two parts: the server to serve images and uses jetpack plugin for manipulating images. To use Tachyon, you need to run at least one server, as well as the jetpack plugin with additional plugin configuration on all sites you want to use it.
+
+```php
+<?php
+$cdn_image_domain_to_use        = 'https://{replace-me}.cloudfront.net'
+$cdn_image_domain_to_use_parsed = wp_parse_url( $cdn_image_domain_to_use );
+
+// Stop creating crops and just use the original image.
+add_filter( 'jetpack_photon_noresize_mode', '__return_true' );
+
+// Setup custom domain.
+add_filter( 'jetpack_photon_domain', fn() => $cdn_image_domain_to_use );
+
+// Trick jetpack to use our domain. See https://github.com/Automattic/jetpack/blob/946220362c7db84cad03c7fae4c76c5930b46fd5/projects/packages/image-cdn/src/class-image-cdn-core.php#L163-L175
+add_filter(
+	'jetpack_photon_pre_image_url',
+	function ( $image_url ) {
+		// Replace host with cloudfront.
+		$parse_url = wp_parse_url( $image_url );
+
+		return str_replace( $parse_url['host'], $cdn_image_domain_to_use_parsed['host'], $image_url );
+	},
+	20
+);
+```
 
 ## Installation on AWS Lambda
 
@@ -33,8 +41,7 @@ Tachyon requires the following Lambda Function spec:
 - Env vars:
   - S3_BUCKET=my-bucket
   - S3_REGION=my-bucket-region
-  - S3_ENDPOINT=http://my-custom-endpoint (optional)
-  - S3_FORCE_PATH_STYLE=1 (optional)
+  - DOMAIN=my-domain.com
 
 Take the `lambda.zip` from the latest release and upload it to your function.
 
@@ -43,28 +50,20 @@ For routing web traffic to the Lambda function, we recommend using [Lambda Funct
 - Auth type: None
 - Invoke mode: `RESPONSE_STREAM`
 
-Alternatively, you can use API Gateway; this should be set to route all GET requests (i.e. `/{proxy+}`) to invoke your Tachyon Lambda function.
-
 We also recommend running an aggressive caching proxy/CDN in front of Tachyon, such as CloudFront. (An expiration time of 1 year is typical for a production configuration.)
 
 ## Documentation
 
-* [Plugin Setup](./docs/plugin.md)
 * [Using Tachyon](./docs/using.md)
 * [Hints and Tips](./docs/tips.md)
 
-
 ## Credits
 
-Created by Human Made for high volume and large-scale sites. We run Tachyon on sites with millions of monthly page views, and thousands of sites.
-
-Written and maintained by [Joe Hoyle](https://github.com/joehoyle).
+Original [Tachyon](https://github.com/humanmade/tachyon) service is created by Humanmade.
 
 Tachyon is inspired by Photon by Automattic. As Tachyon is not an all-purpose image resizer, rather it uses a media library in Amazon S3, it has a different use case to [Photon](https://jetpack.com/support/photon/).
 
 Tachyon uses the [Sharp](https://github.com/lovell/sharp) (Used under the license Apache License 2.0) Node.js library for the resizing operations, which in turn uses the great libvips library.
-
-Interested in joining in on the fun? [Join us, and become human!](https://hmn.md/is/hiring/)
 
 
 ## Looking for a different Tachyon?
