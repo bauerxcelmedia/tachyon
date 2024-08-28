@@ -52,6 +52,24 @@ For routing web traffic to the Lambda function, we recommend using [Lambda Funct
 
 We also recommend running an aggressive caching proxy/CDN in front of Tachyon, such as CloudFront. (An expiration time of 1 year is typical for a production configuration.)
 
+## Installation guide for cloudfront
+
+1. Create a new CloudFront distribution.
+1. Set the origin to the Lambda Function URL.
+1. Setup OAC (Origin Access Identity) to provide cloudfront access to the lambda function.
+	```bash
+		aws lambda add-permission \
+		--statement-id "AllowCloudFrontServicePrincipal" \
+		--action "lambda:InvokeFunctionUrl" \
+		--principal "cloudfront.amazonaws.com" \
+		--source-arn "arn:aws:cloudfront::************:distribution/***********" \
+		--region "ap-southeast-2" \
+		--function-name <YOUR_FUNCTION_NAME>
+	```
+1. Setup behavior to forward all requests to the Lambda Function.
+1. Setup cache control to cache the images for a long time. (1 year is typical for a production configuration.) Only forward header for accept and use all query string for the cache key.
+1. Origin request policy to forward all viewer headers except host header.
+
 ## Diagram
 
 ```mermaid
