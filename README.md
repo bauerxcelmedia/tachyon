@@ -52,6 +52,30 @@ For routing web traffic to the Lambda function, we recommend using [Lambda Funct
 
 We also recommend running an aggressive caching proxy/CDN in front of Tachyon, such as CloudFront. (An expiration time of 1 year is typical for a production configuration.)
 
+## Diagram
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CloudFront
+    participant Lambda
+    participant Origin
+
+    User->>CloudFront: Request resized image
+    alt Image in CloudFront cache
+        CloudFront->>User: Return cached image
+    else Image not in CloudFront cache
+        CloudFront->>Lambda: Forward request
+        Lambda->>Origin: Request original image
+        Origin->>Lambda: Return original image
+        Lambda->>Lambda: Resize image
+        Lambda->>CloudFront: Return resized image
+        CloudFront->>CloudFront: Cache resized image
+        CloudFront->>User: Return resized image
+    end
+```
+
+
 ## Documentation
 
 * [Using Tachyon](./docs/using.md)
