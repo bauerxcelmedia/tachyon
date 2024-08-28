@@ -77,6 +77,7 @@ sequenceDiagram
     participant User
     participant CloudFront
     participant Lambda
+    participant S3
     participant Origin
 
     User->>CloudFront: Request resized image
@@ -84,8 +85,14 @@ sequenceDiagram
         CloudFront->>User: Return cached image
     else Image not in CloudFront cache
         CloudFront->>Lambda: Forward request
-        Lambda->>Origin: Request original image
-        Origin->>Lambda: Return original image
+        Lambda->>S3: Check for original image
+        alt Image in S3
+            S3->>Lambda: Return original image
+        else Image not in S3
+            Lambda->>Origin: Request original image
+            Origin->>Lambda: Return original image
+            Lambda->>S3: Store original image
+        end
         Lambda->>Lambda: Resize image
         Lambda->>CloudFront: Return resized image
         CloudFront->>CloudFront: Cache resized image
