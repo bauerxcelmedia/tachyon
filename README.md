@@ -20,7 +20,7 @@ add_filter( 'jetpack_photon_domain', fn() => $cdn_image_domain_to_use );
 // Trick jetpack to use our domain. See https://github.com/Automattic/jetpack/blob/946220362c7db84cad03c7fae4c76c5930b46fd5/projects/packages/image-cdn/src/class-image-cdn-core.php#L163-L175
 add_filter(
 	'jetpack_photon_pre_image_url',
-	function ( $image_url ) {
+	function ( $image_url ) use ( $cdn_image_domain_to_use_parsed ) {
 		// Replace host with cloudfront.
 		$parse_url = wp_parse_url( $image_url );
 
