@@ -15,6 +15,7 @@ export interface Args {
 	w?: string;
 	webp?: string | boolean;
 	zoom?: string;
+	avif?: string | boolean;
 	'X-Amz-Algorithm'?: string;
 	'X-Amz-Content-Sha256'?: string;
 	'X-Amz-Credential'?: string;
@@ -146,6 +147,12 @@ export async function resizeBuffer(
 			errors.push( 'webp arg is not valid' );
 		}
 	}
+	if ( args.avif ) {
+		if ( ! /^0|1|true|false$/.test( args.avif as string ) ) {
+			delete args.avif;
+			errors.push( 'avif arg is not valid' );
+		}
+	}
 	if ( args.lb ) {
 		if ( ! /^\d+(px)?,\d+(px)?$/.test( args.lb ) ) {
 			delete args.lb;
@@ -248,7 +255,11 @@ export async function resizeBuffer(
 	}
 
 	// allow override of compression quality
-	if ( args.webp ) {
+	if ( args.avif ) {
+		image.avif( {
+			quality: Math.round( clamp( args.quality, 0, 100 ) ),
+		} );
+	} else if ( args.webp ) {
 		image.webp( {
 			quality: Math.round( clamp( args.quality, 0, 100 ) ),
 		} );
