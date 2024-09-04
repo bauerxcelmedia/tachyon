@@ -18,24 +18,15 @@ const streamify_handler: StreamifyHandler = async (event, response) => {
 
   // If accept header has avif then we should use that.
   // Sample header: Accept: image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5
-  const isAvifUndefined = typeof args.avif === 'undefined';
   const isWebpUndefined = typeof args.webp === 'undefined';
+  const headers = event.headers;
+  const acceptHeader = headers?.accept;
 
-  if (isAvifUndefined && isWebpUndefined) {
-    const headers = event.headers;
-    const acceptHeader = headers?.accept;
-    const supportsAvif = !!(acceptHeader && acceptHeader.includes('image/avif'));
-
-    if (isAvifUndefined) {
-        args.avif = supportsAvif;
-    }
-
-    if (!supportsAvif && isWebpUndefined) {
-        // Check if the 'Accept' header includes 'image/webp' or if there is an 'x-webp' header
-        const hasXWebpHeader = Object.keys(headers).some(key => key.toLowerCase() === 'x-webp');
-        const supportsWebp = !!(acceptHeader && acceptHeader.includes('image/webp'));
-        args.webp = hasXWebpHeader || supportsWebp;
-    }
+  if (isWebpUndefined) {
+    // Check if the 'Accept' header includes 'image/webp' or if there is an 'x-webp' header
+    const hasXWebpHeader = Object.keys(headers).some(key => key.toLowerCase() === 'x-webp');
+    const supportsWebp = !!(acceptHeader && acceptHeader.includes('image/webp'));
+    args.webp = hasXWebpHeader || supportsWebp;
   }
 
   // If there is a presign param, we need to decode it and add it to the args.
