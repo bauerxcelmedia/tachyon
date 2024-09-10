@@ -244,7 +244,7 @@ export async function resizeBuffer(
 			left: cropValues[0],
 			top: cropValues[1],
 			width: cropValues[2],
-			height: cropValues[3],
+			height: Math.min(cropValues[3], metadata.height as number),
 		} );
 	}
 

@@ -73,19 +73,32 @@ const streamify_handler: StreamifyHandler = async (event, response) => {
       throw error;
     }
   }
-  let { info, data } = await resizeBuffer(buffer, args);
-  // If this is a signed URL, we need to calculate the max-age of the image.
-  const maxAge = 31536000; // 1 year.
-  response = awslambda.HttpResponseStream.from(response, {
-    statusCode: 200,
-    headers: {
-      "Cache-Control": `max-age=${maxAge}`,
-      "Last-Modified": new Date().toUTCString(),
-      "Content-Type": "image/" + info.format,
-    },
-  });
-  response.write(data);
-  response.end();
+  try {
+    let { info, data } = await resizeBuffer(buffer, args);
+    // If this is a signed URL, we need to calculate the max-age of the image.
+    const maxAge = 31536000; // 1 year.
+    response = awslambda.HttpResponseStream.from(response, {
+      statusCode: 200,
+      headers: {
+        "Cache-Control": `max-age=${maxAge}`,
+        "Last-Modified": new Date().toUTCString(),
+        "Content-Type": "image/" + info.format,
+      },
+    });
+    response.write(data);
+    response.end();
+  } catch (e: any) {
+    console.error(e);
+    const metadata = {
+      statusCode: 500,
+      headers: {
+        "Content-Type": "text/html",
+      },
+    };
+    response = awslambda.HttpResponseStream.from(response, metadata);
+    response.write("Internal server error.");
+    response.end();
+  }
 };
 
 if (typeof awslambda === "undefined") {
