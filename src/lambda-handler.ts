@@ -4,7 +4,6 @@ import { Args, resizeBuffer, getS3File, Config } from "./lib.js";
 import { URLSearchParams } from "url";
 
 const streamify_handler: StreamifyHandler = async (event, response) => {
-  const s3Client = new S3Client({ region: process.env.S3_REGION });
   const region = process.env.S3_REGION!;
   const bucket = process.env.S3_BUCKET!;
   const config: Config = {
@@ -30,9 +29,11 @@ const streamify_handler: StreamifyHandler = async (event, response) => {
     }
     delete args.presign;
   }
+
   const originalUrl = `${process.env.DOMAIN}/${key}`;
-  let fetchResponse;
-  let buffer;
+  let buffer: Buffer | undefined;
+  let fetchResponse: Response | undefined;
+
   try {
     const s3Response = await getS3File(config, key, args);
     if (s3Response.Body === undefined) {
@@ -53,6 +54,7 @@ const streamify_handler: StreamifyHandler = async (event, response) => {
           Body: buffer,
         };
         const command = new PutObjectCommand(params);
+        const s3Client = new S3Client({ region: region });
         await s3Client.send(command);
       } catch (e: any) {
         if (e.message.includes("404") || fetchResponse?.status === 404) {
@@ -68,14 +70,17 @@ const streamify_handler: StreamifyHandler = async (event, response) => {
           return;
         }
         throw e;
+      } finally {
+        fetchResponse = undefined;
       }
     } else {
       throw error;
     }
   }
+
   try {
-    let { info, data } = await resizeBuffer(buffer, args);
-    // If this is a signed URL, we need to calculate the max-age of the image.
+    const { info, data } = await resizeBuffer(buffer!, args);
+    buffer = undefined;
     const maxAge = 31536000; // 1 year.
     response = awslambda.HttpResponseStream.from(response, {
       statusCode: 200,
