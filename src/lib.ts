@@ -243,8 +243,8 @@ export async function resizeBuffer(
 		image.extract( {
 			left: cropValues[0],
 			top: cropValues[1],
-			width: cropValues[2],
-			height: Math.min(cropValues[3], metadata.height as number),
+			width: Math.min(cropValues[2], metadata.width as number),
+			height: Math.min(cropValues[3], metadata.height as number - cropValues[1]),
 		} );
 	}
 
