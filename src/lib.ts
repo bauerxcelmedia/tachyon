@@ -131,6 +131,7 @@ export async function resizeBuffer(
 	const image = sharp( buffer, {
 		failOnError: false,
 		animated: true,
+		limitInputPixels: false,
 	} ).withMetadata();
 
 	// check we can get valid metadata
