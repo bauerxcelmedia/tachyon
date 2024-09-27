@@ -240,12 +240,15 @@ export async function resizeBuffer(
 			}
 		} );
 
-		image.extract( {
+		const extractWidth = Math.min(cropValues[2], metadata.width as number - cropValues[0]);
+		const extractHeight = Math.min(cropValues[3], metadata.height as number - cropValues[1]);
+
+		image.extract({
 			left: cropValues[0],
 			top: cropValues[1],
-			width: Math.min(cropValues[2], metadata.width as number),
-			height: Math.min(cropValues[3], metadata.height as number - cropValues[1]),
-		} );
+			width: extractWidth,
+			height: extractHeight
+		});
 	}
 
 	// get zoom value
