@@ -137,6 +137,9 @@ export async function resizeBuffer(
 	// check we can get valid metadata
 	const metadata = await image.metadata();
 
+	let width = metadata.width as number;
+	let height = metadata.height as number;
+
 	// auto rotate based on orientation EXIF data.
 	image.rotate();
 
@@ -226,32 +229,6 @@ export async function resizeBuffer(
 		}
 	}
 
-	// crop (assumes crop data from original)
-	if ( args.crop ) {
-		const cropValuesString = typeof args.crop === 'string' ? args.crop.split( ',' ) : args.crop;
-
-		// convert percentages to px values
-		const cropValues = cropValuesString.map( function ( value, index ) {
-			if ( value.indexOf( 'px' ) > -1 ) {
-				return Number( value.substring( 0, value.length - 2 ) );
-			} else {
-				return Number(
-					Number( ( metadata[index % 2 ? 'height' : 'width'] as number ) * ( Number( value ) / 100 ) ).toFixed( 0 )
-				);
-			}
-		} );
-
-		const extractWidth = Math.min(cropValues[2], metadata.width as number - cropValues[0]);
-		const extractHeight = Math.min(cropValues[3], metadata.height as number - cropValues[1]);
-
-		image.extract({
-			left: cropValues[0],
-			top: cropValues[1],
-			width: extractWidth,
-			height: extractHeight
-		});
-	}
-
 	// get zoom value
 	const zoom = parseFloat( args.zoom || '1' ) || 1;
 
@@ -304,12 +281,43 @@ export async function resizeBuffer(
 			withoutEnlargement: true,
 		} );
 	} else if ( args.w || args.h ) {
+		const newWidth = Number(args.w);
+        const aspectRatio = height / width;
+        width = newWidth;
+        height = Math.round(newWidth * aspectRatio);
 		image.resize( {
-			width: Number( args.w ) * zoom || undefined,
+			width: newWidth * zoom || undefined,
 			height: Number( args.h ) * zoom || undefined,
 			fit: args.crop ? 'cover' : 'inside',
 			withoutEnlargement: true,
 		} );
+	}
+
+	if (args.crop) {
+		const cropValuesString = typeof args.crop === 'string' ? args.crop.split(',') : args.crop;
+
+		// convert percentages to px values
+		const cropValues = cropValuesString.map((value, index) => {
+			if (value.endsWith('px')) {
+				return Number(value.slice(0, -2));
+			} else {
+				const dimension = index % 2 === 0 ? 'width' : 'height';
+				return Math.round((metadata[dimension] as number) * (Number(value) / 100));
+			}
+		});
+
+		const [x, y, w, h] = cropValues;
+
+		// Ensure crop dimensions don't exceed image boundaries
+		const extractWidth = Math.min(w, width - x);
+		const extractHeight = Math.min(h, height - y);
+
+		image.extract({
+			left: x,
+			top: y,
+			width: extractWidth,
+			height: extractHeight
+		});
 	}
 
 	// set default quality slightly higher than sharp's default
