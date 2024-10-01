@@ -36,6 +36,27 @@ add_filter(
 
 We require using Tachyon on [AWS Lambda](https://aws.amazon.com/lambda/details/) to offload image processing tasks in a serverless configuration. This ensures you don't need lots of hardware to handle thousands of image resize requests and can scale essentially infinitely. One Tachyon stack is required per S3 bucket, so we recommend using a common region bucket for all sites, which then only requires a single Tachyon stack per region.
 
+
+## Setup, install and deployment
+
+Install Sam from here:
+https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html
+
+Run through the setup.
+
+Then run the following commands:
+```bash
+git clone git@github.com:bauerxcelmedia/tachyon.git
+cd tachyon
+npm install
+npm run build
+npm run build-zip
+```
+This will give you the lambda.zip file that you can upload to your AWS Lambda function.
+
+It is in the **am-digital-prod** account you can go to:
+https://ap-southeast-2.console.aws.amazon.com/lambda/home?region=ap-southeast-2#/functions/photon-s3?tab=code
+in order to upload the lambda.zip file.
 ### Lambda Function Spec
 
 - **Runtime:** Node.js 18
