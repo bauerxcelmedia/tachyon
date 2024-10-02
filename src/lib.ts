@@ -126,7 +126,8 @@ type ResizeBufferResult = {
  */
 export async function resizeBuffer(
 	buffer: Buffer | Uint8Array,
-	args: Args
+	args: Args,
+	paramOrder: string[]
 ): Promise<ResizeBufferResult> {
 	const image = sharp( buffer, {
 		failOnError: false,
@@ -232,92 +233,153 @@ export async function resizeBuffer(
 	// get zoom value
 	const zoom = parseFloat( args.zoom || '1' ) || 1;
 
-	// resize
-	if ( args.resize ) {
-		// apply smart crop if available
-		if ( args.crop_strategy === 'smart' && ! args.crop ) {
-			const cropResize = getDimArray( args.resize );
-			const rotatedImage = await image.toBuffer();
-			const result = await smartcrop.crop( rotatedImage, {
-				width: cropResize[0] as number,
-				height: cropResize[1] as number,
-			} );
+	for (const param of paramOrder) {
+		switch (param) {
+			// resize
+			case 'resize': {
+				if (args.resize) {
+					// apply smart crop if available
+					if (args.crop_strategy === 'smart' && !args.crop) {
+						const cropResize = getDimArray(args.resize);
+						const rotatedImage = await image.toBuffer();
+						const result = await smartcrop.crop(rotatedImage, {
+							width: cropResize[0] as number,
+							height: cropResize[1] as number,
+						});
 
-			if ( result && result.topCrop ) {
-				image.extract( {
-					left: result.topCrop.x,
-					top: result.topCrop.y,
-					width: result.topCrop.width,
-					height: result.topCrop.height,
-				} );
+						if (result && result.topCrop) {
+							image.extract({
+								left: result.topCrop.x,
+								top: result.topCrop.y,
+								width: result.topCrop.width,
+								height: result.topCrop.height,
+							});
+							width = result.topCrop.width;
+							height = result.topCrop.height;
+						}
+					}
+
+					// apply the resize
+					const [resizeWidth, resizeHeight] = getDimArray(args.resize, zoom) as number[];
+					const scale = Math.min(
+						resizeWidth / width,
+						resizeHeight / height,
+						1 // Prevent enlargement
+					);
+					const newWidth = Math.round(width * scale);
+					const newHeight = Math.round(height * scale);
+
+					image.resize({
+						width: newWidth,
+						height: newHeight,
+						withoutEnlargement: true,
+						position: (args.crop_strategy !== 'smart' && args.crop_strategy) || args.gravity || 'centre',
+					});
+					width = newWidth;
+					height = newHeight;
+				}
+				break;
 			}
+			case 'fit': {
+				if (args.fit) {
+					const [targetWidth, targetHeight] = getDimArray(args.fit, zoom) as number[];
+
+					const scale = Math.min(
+						targetWidth / width,
+						targetHeight / height,
+						1 // This ensures we don't enlarge the image
+					);
+					width = Math.round(width * scale);
+					height = Math.round(height * scale);
+
+					image.resize({
+						width,
+						height,
+						fit: 'inside',
+						withoutEnlargement: true,
+					});
+				}
+				break;
+			}
+			case 'lb': {
+				if (args.lb) {
+					const lb = getDimArray(args.lb, zoom) as number[];
+					image.resize({
+						width: lb[0],
+						height: lb[1],
+						fit: 'contain',
+						background: args.background || 'black',
+						withoutEnlargement: true,
+					});
+					width = lb[0];
+					height = lb[1];
+				}
+				break;
+			}
+			case 'h':
+			case 'w': {
+				if (args.w || args.h) {
+					const newWidth = Number(args.w) || width;
+					const newHeight = Number(args.h) || height;
+					const aspectRatio = height / width;
+
+					if (args.w && !args.h) {
+						height = Math.round(newWidth * aspectRatio);
+						width = newWidth;
+					} else if (args.h && !args.w) {
+						width = Math.round(newHeight / aspectRatio);
+						height = newHeight;
+					} else {
+						width = newWidth;
+						height = newHeight;
+					}
+
+					image.resize({
+						width: width * zoom,
+						height: height * zoom,
+						fit: args.crop ? 'cover' : 'inside',
+						withoutEnlargement: true,
+					});
+				}
+				break;
+			}
+			case 'crop': {
+				if (args.crop) {
+					const cropValuesString = typeof args.crop === 'string' ? args.crop.split(',') : args.crop;
+
+					// convert percentages and px values to numbers
+					const cropValues = cropValuesString.map((value, index) => {
+						if (value.endsWith('px')) {
+							return Number(value.slice(0, -2));
+						} else {
+							const dimension = index % 2 === 0 ? width : height;
+							return Math.round(dimension * (Number(value) / 100));
+						}
+					});
+
+					let [x, y, w, h] = cropValues;
+
+					// Ensure crop dimensions don't exceed image boundaries
+					x = Math.min(Math.max(x, 0), width);
+					y = Math.min(Math.max(y, 0), height);
+					w = Math.min(w, width - x);
+					h = Math.min(h, height - y);
+
+					image.extract({
+						left: x,
+						top: y,
+						width: w,
+						height: h
+					});
+
+					width = w;
+					height = h;
+				}
+				break;
+			}
+			default:
+				break;
 		}
-
-		// apply the resize
-		args.resize = getDimArray( args.resize, zoom ) as number[];
-		image.resize( {
-			width: args.resize[0],
-			height: args.resize[1],
-			withoutEnlargement: true,
-			position: ( args.crop_strategy !== 'smart' && args.crop_strategy ) || args.gravity || 'centre',
-		} );
-	} else if ( args.fit ) {
-		const fit = getDimArray( args.fit, zoom ) as number[];
-		image.resize( {
-			width: fit[0],
-			height: fit[1],
-			fit: 'inside',
-			withoutEnlargement: true,
-		} );
-	} else if ( args.lb ) {
-		const lb = getDimArray( args.lb, zoom ) as number[];
-		image.resize( {
-			width: lb[0],
-			height: lb[1],
-			fit: 'contain',
-			// default to a black background to replicate Photon API behavior
-			// when no background colour specified
-			background: args.background || 'black',
-			withoutEnlargement: true,
-		} );
-	} else if ( args.w || args.h ) {
-		const newWidth = Number(args.w);
-        const aspectRatio = height / width;
-        width = newWidth;
-        height = Math.round(newWidth * aspectRatio);
-		image.resize( {
-			width: newWidth * zoom || undefined,
-			height: Number( args.h ) * zoom || undefined,
-			fit: args.crop ? 'cover' : 'inside',
-			withoutEnlargement: true,
-		} );
-	}
-
-	if (args.crop) {
-		const cropValuesString = typeof args.crop === 'string' ? args.crop.split(',') : args.crop;
-
-		// convert percentages to px values
-		const cropValues = cropValuesString.map((value, index) => {
-			if (value.endsWith('px')) {
-				return Number(value.slice(0, -2));
-			} else {
-				const dimension = index % 2 === 0 ? 'width' : 'height';
-				return Math.round((metadata[dimension] as number) * (Number(value) / 100));
-			}
-		});
-
-		const [x, y, w, h] = cropValues;
-
-		// Ensure crop dimensions don't exceed image boundaries
-		const extractWidth = Math.min(w, width - x);
-		const extractHeight = Math.min(h, height - y);
-
-		image.extract({
-			left: x,
-			top: y,
-			width: extractWidth,
-			height: extractHeight
-		});
 	}
 
 	// set default quality slightly higher than sharp's default
