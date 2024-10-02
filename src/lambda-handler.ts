@@ -80,7 +80,8 @@ const streamify_handler: StreamifyHandler = async (event, response) => {
   }
 
   try {
-    const { info, data } = await resizeBuffer(buffer!, args);
+    const originalOrder = Object.keys(event.queryStringParameters || {});
+    const { info, data } = await resizeBuffer(buffer!, args, originalOrder);
     buffer = undefined;
     const maxAge = 31536000; // 1 year.
     response = awslambda.HttpResponseStream.from(response, {
