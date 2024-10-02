@@ -18,10 +18,10 @@ const streamify_handler: StreamifyHandler = async (event, response) => {
     "X-Amz-Expires"?: string;
     presign?: string;
     key: string;
-    webp?: boolean;
+    original?: boolean;
   };
   args.key = key;
-  args.webp = args.webp || true;
+  args.webp = args.original ? false : true;
   // If there is a presign param, we need to decode it and add it to the args.
   if (args.presign) {
     const presignArgs = new URLSearchParams(args.presign);
