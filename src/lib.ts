@@ -233,6 +233,13 @@ export async function resizeBuffer(
 	// get zoom value
 	const zoom = parseFloat( args.zoom || '1' ) || 1;
 
+	// If crop exists move crop to first and remove from previous position
+	// Note AWS doesn't preseve order of query string params
+	if ( args.crop ) {
+		paramOrder = paramOrder.filter( param => param !== 'crop' );
+		paramOrder.unshift( 'crop' );
+	}
+
 	for (const param of paramOrder) {
 		switch (param) {
 			// resize
@@ -362,8 +369,8 @@ export async function resizeBuffer(
 					// Ensure crop dimensions don't exceed image boundaries
 					x = Math.min(Math.max(x, 0), width);
 					y = Math.min(Math.max(y, 0), height);
-					w = Math.min(w, width - x);
-					h = Math.min(h, height - y);
+					w = Math.min(Math.max(w, 1), width - x);  // Ensure width is at least 1
+					h = Math.min(Math.max(h, 1), height - y); // Ensure height is at least 1
 
 					image.extract({
 						left: x,
