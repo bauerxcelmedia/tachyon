@@ -22,6 +22,12 @@ const streamify_handler: StreamifyHandler = async (event, response) => {
   };
   args.key = key;
   args.webp = args.original ? false : true;
+
+  // We want to have a default crop strategy of smart if we are resizing.
+  if ( args.resize ) {
+    args.crop_strategy = args.crop_strategy || 'smart';
+  }
+
   // If there is a presign param, we need to decode it and add it to the args.
   if (args.presign) {
     const presignArgs = new URLSearchParams(args.presign);
