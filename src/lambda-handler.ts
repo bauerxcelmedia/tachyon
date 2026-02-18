@@ -44,7 +44,12 @@ const streamify_handler: StreamifyHandler = async (event, response) => {
   } catch (error: any) {
     if (error.Code === "NoSuchKey" || error.Code === "AccessDenied") {
       try {
-        fetchResponse = await fetch(originalUrl);
+        fetchResponse = await fetch(originalUrl, {
+          method: "GET",
+          headers: {
+            "User-Agent": "Aremedial/Tachyon-1.0",
+          }
+        })
         if (!fetchResponse.ok) {
           throw new Error(`HTTP error! status: ${fetchResponse.status}`);
         }
