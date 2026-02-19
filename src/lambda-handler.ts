@@ -47,7 +47,7 @@ const streamify_handler: StreamifyHandler = async (event, response) => {
         fetchResponse = await fetch(originalUrl, {
           method: "GET",
           headers: {
-            "User-Agent": "Aremedial/Tachyon-1.0",
+            "User-Agent": "Aremedia/Tachyon-1.0",
           }
         })
         if (!fetchResponse.ok) {
